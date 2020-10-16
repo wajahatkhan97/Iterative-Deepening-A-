@@ -7,6 +7,9 @@ import java.sql.SQLOutput;
 import java.util.*;
 
 ///Iterative deepening using A*/////////////
+/*
+Time complexity is O(bd)
+ */
 public class Main {
     public static Queue<int[][]> myqueue;
     public static int[][] goal_State;
@@ -27,9 +30,13 @@ public class Main {
     public static int curr_node_cost= 0;
     public static int Total_cost= 0;
     public static int curr_goal_cost= 0;
-
     public static Map<int[][],Integer> total_cost;
     public static Map<int[][],String> map_moves;
+    public static int Threshold = 0;
+    ///==========================This part is for iterative deepening A*================================
+
+    public static Stack<int[][]> my_stack;
+    public static ArrayList<int[][]> collect_childs;
 
     public static void main(String[] args) throws IOException {
         // did this project in two way
@@ -173,98 +180,131 @@ public class Main {
 //    1 2 3 4 5 6 8 0 9 11 7 12 13 10 14 15
 //    hamming
     public static int[][] Hamming_misplaced_tiles(int[][] node) {
-        int count =0;
-        stk = new LinkedList<>();
-        myqueue = new LinkedList<>();
+
+//1 3 4 8 5 2 0 6 9 10 7 11 13 14 15 12
+        ;
+        count=0;
+        ArrayList<int[][]> visited_nodes = new ArrayList<>();
+        Map<int[][],Integer> map_threshold = new HashMap<>();
+        my_stack = new Stack<>();
+        myqueue = new LinkedList<>(); //keep the visited notes
         duplicate = new ArrayList<>();
         total_cost = new HashMap<>();
         map_moves = new HashMap<>();
-        stk.add(node); //add the root node to queue
+        collect_childs = new ArrayList<>();
         int[][] start_node = node;
-        while(!stk.isEmpty())
-        {
-            int[][] next_node = stk.poll();//get the top
+        my_stack.add(node);
+        while(!my_stack.isEmpty()){
+            int[][]next_node = my_stack.peek();
+            my_stack.pop();
             nodes++;
-            duplicate.add(next_node); // keep the copy of  node
-            if(count==0) {
-                curr_node_cost = calculate_cost(start_node, next_node);  //g(n) this will calcualte the cost of curr_node from start_node
-                Total_cost = curr_node_cost + calculate_goal_cost(goal_State, next_node); //calculate total cost h(n)
-
-                System.out.println(curr_node_cost);
-                System.out.println();
-                System.out.println(Total_cost);
-            }
-//            total_cost.put(next_node,Total_cost); //store the total cost of the node
-
-            for(int i =1 ; i <=4;i++)
+            duplicate.add(next_node);
+            if(!visited_nodes.contains(next_node))
             {
-                count++;
-                nodes++;
-                Tree check = new Tree();
-                int[][] result1 = check.Node_swap(next_node, i);
-                String move = map_moves.get(next_node)+moves_sol;
-                map_moves.put(result1,move);
-                if (check != null) {
-                    if (!check(duplicate, result1)) { //check for duplicates
-                        System.out.println();
-                        System.out.println();
-                        System.out.println();
-                        printarray2D(result1);
+                visited_nodes.add(next_node); // keeping track of visited nodes here
+            }
+
+    if(count==0) {
+            curr_node_cost = calculate_cost(start_node, next_node);  //g(n) this will calcualte the cost of curr_node from start_node
+            Total_cost = curr_node_cost + calculate_goal_cost(goal_State, next_node); //calculate total cost h(n)
+            System.out.println(curr_node_cost);
+            System.out.println();
+            System.out.println(Total_cost);
+            Threshold = Total_cost;
+        }
+        else
+            {
+                Threshold = map_threshold.get(next_node); //hold the threshold
+            }
+
+        for(int i =1 ; i <=4;i++)
+        {
+            count++;
+            nodes++;
+            Tree check = new Tree();
+            int[][] result1 = check.Node_swap(next_node, i);
+            String move = map_moves.get(next_node)+moves_sol;
+            map_moves.put(result1,move);
+            if (check != null) {
+                if (!check(duplicate, result1)) { //check for duplicates
+                    System.out.println();
+                    System.out.println();
+                    System.out.println();
+                    printarray2D(result1);
 
 
-                        if(match(goal_State,result1,9))
-                        {
-                            System.out.println("FOUND SOLUTION WITH HAMMING");
-                            move = move.replace("null","");
-                            moves_sol=move;
-                            //f(n) = g(n) + h(n)
-
-                            return null;
-                        }
-                        curr_node_cost = calculate_cost(start_node,result1);  // g (n) is the cost of the path from the initial state to n
-
-                        Total_cost = curr_node_cost+ calculate_goal_cost(goal_State,result1); //calculate total cost f(n) = g(n) + h(n)
-                        total_cost.put(result1,Total_cost);
-                        myqueue.add(result1);
-
-                    }
-                    else
+                    if(match(goal_State,result1,9))
                     {
-                        curr_node_cost=0;
-                        Total_cost=0;
+                        System.out.println("FOUND SOLUTION WITH HAMMING");
+                        move = move.replace("null","");
+                        moves_sol=move;
+                        //f(n) = g(n) + h(n)
+                        System.out.println(Total_cost);
+                        return null;
                     }
+                    curr_node_cost = calculate_cost(start_node,result1);  // g (n) is the cost of the path from the initial state to n
+
+                    Total_cost = curr_node_cost+ calculate_goal_cost(goal_State,result1); //calculate total cost f(n) = g(n) + h(n)
+                    total_cost.put(result1,Total_cost);
+                    collect_childs.add(result1);
+                    map_threshold.put(result1,Total_cost); //this will contain the value of each map
+                    myqueue.add(result1);
+                    System.out.println("Total cost at each iteration: " + Total_cost);
+
+                }
+                else
+                {
+                    curr_node_cost=0;
+                    Total_cost=0;
                 }
             }
-            stk.add(check_lowest_2(myqueue)); //add the lowest path to second queue and neglect all others
-
-//1 3 4 8 5 2 0 6 9 10 7 11 13 14 15 12
         }
+        ArrayList<int[][]>temp = new ArrayList<>();
+        temp = check_lowest_2(map_threshold,myqueue);
+        for(int i=0;i<temp.size();i++) {
+            my_stack.add(temp.get(i)); //add the lowest path to second queue and neglect all others
+        }
+        }
+
         return null;
         //using stack cause its lifo help us in traversing
-
     }
 
     public static int[][] Manhattan_distance(int[][] node) {
-        int count =0;
-        stk = new LinkedList<>();
-        myqueue = new LinkedList<>();
+        count=0;
+        ArrayList<int[][]> visited_nodes = new ArrayList<>();
+        Map<int[][],Integer> map_threshold = new HashMap<>();
+        my_stack = new Stack<>();
+        myqueue = new LinkedList<>(); //keep the visited notes
         duplicate = new ArrayList<>();
         total_cost = new HashMap<>();
         map_moves = new HashMap<>();
-        stk.add(node); //add the root node to queue
+        collect_childs = new ArrayList<>();
         int[][] start_node = node;
-        while(!stk.isEmpty())
-        {
-            int[][] next_node = stk.poll();//get the top
+        my_stack.add(node);
+        while(!my_stack.isEmpty()){
+            int[][]next_node = my_stack.peek();
+            my_stack.pop();
             nodes++;
-            duplicate.add(next_node); // keep the copy of  node
-            if(count==0) {
-                curr_node_cost = Manhattan_distance_start(start_node, next_node);  //g(n) this will calcualte the cost of curr_node from start_node
-                Total_cost = curr_node_cost + Manhattan_distance(goal_State, next_node); //calculate total cost f(n) =  g(n)+h(n)
-                //if total cost is zero then startstate is goal state
+            duplicate.add(next_node);
+            if(!visited_nodes.contains(next_node))
+            {
+                visited_nodes.add(next_node); // keeping track of visited nodes here
             }
-//            total_cost.put(next_node,Total_cost); //store the total cost of the node
-//1 3 4 8 5 2 0 6 9 10 7 11 13 14 15 12
+
+            if(count==0) {
+                curr_node_cost = calculate_cost(start_node, next_node);  //g(n) this will calcualte the cost of curr_node from start_node
+                Total_cost = curr_node_cost + calculate_goal_cost(goal_State, next_node); //calculate total cost h(n)
+                System.out.println(curr_node_cost);
+                System.out.println();
+                System.out.println(Total_cost);
+                Threshold = Total_cost;
+            }
+            else
+            {
+                Threshold = map_threshold.get(next_node); //hold the threshold kind of like depth in our IDDFS
+            }
+
             for(int i =1 ; i <=4;i++)
             {
                 count++;
@@ -286,13 +326,18 @@ public class Main {
                             System.out.println("FOUND SOLUTION WITH Manhattan");
                             move = move.replace("null","");
                             moves_sol=move;
+                            //f(n) = g(n) + h(n)
+                            System.out.println(Total_cost);
                             return null;
                         }
+                        curr_node_cost = calculate_cost(start_node,result1);  // g (n) is the cost of the path from the initial state to n
+
                         curr_node_cost = Manhattan_distance_start(start_node,result1);  //g(n) this will calcualte the cost of curr_node from start_node
                         Total_cost = curr_node_cost+Manhattan_distance(goal_State,result1); //calculate total cost h(n)
-                        total_cost.put(result1,Total_cost);
+                        collect_childs.add(result1);
+                        map_threshold.put(result1,Total_cost); //this will contain the value of each map
                         myqueue.add(result1);
-                        ;
+                        System.out.println("Total cost at each iteration: " + Total_cost);
 
                     }
                     else
@@ -302,14 +347,20 @@ public class Main {
                     }
                 }
             }
-            stk.add(check_lowest_1(myqueue)); //add the lowest path to second queue and neglect all others
-
-
+            ArrayList<int[][]>temp = new ArrayList<>(); //redundant
+            temp = check_lowest_2(map_threshold,myqueue);
+            for(int i=0;i<temp.size();i++) {
+                my_stack.add(temp.get(i)); //add the lowest path to second queue and neglect all others
+            }
         }
+
         return null;
-        //using stack cause its lifo help us in traversing
 
     }
+    /*
+
+
+     */
     public static int[][] check_lowest_1(Queue<int[][]>my_queue) //java the reference "GOD"
     {
         int[][] lowest = null;
@@ -354,49 +405,30 @@ public class Main {
 
     }
 
-    public static int[][] check_lowest_2(Queue<int[][]>my_queue) //java the reference "GOD"
-    {
-        int[][] lowest = null;
-        int[][] cost1_node = null;
-        int[][] cost2_node = null;
-
-        for (int i = 0; i <= my_queue.size(); i++) {
-
-            if(my_queue.size()==1)
+    public static ArrayList<int[][]> check_lowest_2(Map<int[][],Integer>map,Queue<int[][]>my_queue) //java the reference "GOD"
+    {  //send a map here with node and its total distance and compare the threshold with it
+        ArrayList<int[][]> lowest = new ArrayList<>();
+    for(int j =0;j<map.size();j++) {
+        if (my_queue.peek() != null) { //have to do this because we pop the out of threshold elements
+            if (map.get(my_queue.peek()) > Threshold) //if the child node have the distance more than threshold then remove the child from the list
             {
-                lowest =my_queue.poll();
-            }
-            cost1_node = my_queue.poll();
-            cost2_node = my_queue.poll();
-            if (cost1_node != null && cost2_node != null) //means nothings to poll in queue{
-            {
-                int cost1 = total_cost.get(cost1_node);
-
-                int cost2 = total_cost.get(cost2_node);
-                if (cost1 > cost2) {
-                    //;
-                    lowest = cost2_node;
-                    my_queue.add(lowest); //keep it in queue so that you can compare with others
+                my_queue.poll(); //if the child f(n) is greater than the threshold then do not add
+            } else {
+                if (map.get(my_queue.peek()) == Threshold) //if both of them are equal then add.
+                {
+                    lowest.add(my_queue.poll());
                 }
-
-                if (cost1 < cost2) {
-                    //;
-                    lowest = cost1_node;
-                    my_queue.add(lowest); //keep it in queue so that you can compare with others
-                }
-
-
-                if (cost1 == cost2) {
-                    lowest = cost1_node;
-                    my_queue.add(lowest);
-                }
-
             }
         }
+    }
+    if(lowest.size()==0)
+    {
+        lowest.add(collect_childs.remove(0)); //collect_childs is basically to go back and check other children if any path possible from them
+    }
         my_queue.clear();
         return lowest;
-
     }
+
 
     public static int[] coordinates(int val,int[][]start_State) {
         int arr[] = new int[2];
